@@ -1,0 +1,54 @@
+对于HZK16字库里的16×16汉字（其实只用到了16×15，即16行15列，最后1列是空白的，但是作为GBK汉字，则使用了最后这一列）来说一共需要256个点来显示一个普通的汉字，那么共需要32个字节才能达到该目的。
+
+首先，一个GB2312汉字是由两个字节编码的，范围为A1A1~FEFE。A1-A9为符号区，B0到F7为汉字区。每一个区有94个字符（当然，这只是编码的许可范围，而不是这些编码都对应有字型，比如符号区就有很多编码空白区域）。所以，当接受到了一个汉字编码譬如“鹿”字，如何在HZK16文件中找到它对应的32个字节的字模数据呢。
+
+计算方法如下：
+C2H-A1H=21H （33D区，因为汉字编码是从A1区开始的，所以文件最前面就是从A1区开始）
+B9H-A1H=18H （24D位，道理如上所述，这就是所谓的区位码）
+21H×5EH+18H=C36H （5EH就是94D，代表一个区有94个字符，C36H就是说这个字符在HZK16里是第C36H个）
+C36H×20H=186C0H （20H就是32D，代表一个字符占32个字节，这里得到的186C0H就是“鹿”字在HZK16文件中的偏移地址，从这里开始之后的32个字节就是我们要寻找的字符字模）
+
+ 
+
+Dim zw(1 To 128) As Byte
+
+Private Sub Command1_Click()
+If Len(Text1.Text) <> 4 Then
+MsgBox "输入汉字不足四个！"
+Text1.Text = ""
+
+
+Else
+Dim ff As String
+ff = CALL_LED(Text1.Text)
+For I = 1 To 128 Step 1
+'If (Imod8) = 0 Then
+Text2.Text = Text2.Text & " 0"
+'End If
+Text2.Text = Text2.Text & Hex(zw(I)) & "H"
+Next I
+End If
+End Sub
+
+Private Function CALL_LED(ledstring As String)
+For j = 1 To 4
+
+AA = Hex(Asc(Mid(ledstring, j, 1)))
+bb = (94 * (CLng("&H" & Mid(AA, 1, 2)) - &HA1) + (CLng("&H" & Mid(AA, 3, 2)) - &HA1)) * 32
+For I = 1 To 32 Step 1
+Open "C:\Documents and Settings\Administrator\桌面\点阵\HZK16" For Binary As #1
+Get #1, bb + I, zw(32 * (j - 1) + I)
+Close #1
+Next I
+Next j
+End Function
+
+Private Sub Command2_Click()
+End
+End Sub
+
+Private Sub Form_Load()
+Text1.Text = ""
+Text2.Text = ""
+End Sub
+
